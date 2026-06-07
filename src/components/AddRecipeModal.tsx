@@ -22,10 +22,6 @@ export default function AddRecipeModal({ day, settings, onClose, onAdd }: Props)
 
   async function submit() {
     setError('')
-    if (!settings.apiKey) {
-      setError('Add your Claude API key in Settings first.')
-      return
-    }
     setBusy(true)
     try {
       const meal =
