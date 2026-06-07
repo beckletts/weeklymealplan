@@ -1,19 +1,31 @@
 import { useState } from 'react'
 import { SLOW_COOKER_DAYS, type Day, type Meal } from '../types'
 import { formatNice } from '../lib/storage'
-import { Plus, Trash, Refresh, Pot, Chevron } from './Icons'
+import { Plus, Trash, Refresh, Pot, Chevron, Heart } from './Icons'
 
 interface Props {
   day: Day
   date: string
   meal?: Meal
   busy: boolean
+  favourite: boolean
   onAdd: () => void
   onSuggest: () => void
   onRemove: () => void
+  onToggleFavourite: (title: string) => void
 }
 
-export default function DayCard({ day, date, meal, busy, onAdd, onSuggest, onRemove }: Props) {
+export default function DayCard({
+  day,
+  date,
+  meal,
+  busy,
+  favourite,
+  onAdd,
+  onSuggest,
+  onRemove,
+  onToggleFavourite,
+}: Props) {
   const [open, setOpen] = useState(false)
   const isSlow = SLOW_COOKER_DAYS.includes(day)
 
@@ -80,6 +92,15 @@ export default function DayCard({ day, date, meal, busy, onAdd, onSuggest, onRem
           )}
 
           <div className="flex gap-3 mt-3 pt-2 border-t border-gray-50">
+            <button
+              onClick={() => onToggleFavourite(meal.title)}
+              className={`flex items-center gap-1 text-xs ${
+                favourite ? 'text-rose-500' : 'text-gray-500 hover:text-rose-500'
+              }`}
+              title={favourite ? 'Loved — AI will suggest more like this' : 'Mark as loved'}
+            >
+              <Heart className="size-3.5" filled={favourite} /> {favourite ? 'Loved' : 'Love'}
+            </button>
             <button
               onClick={onSuggest}
               disabled={busy}

@@ -64,6 +64,8 @@ export interface Settings {
   likes: string
   dislikes: string
   cuisines: string
+  /** Name of the Apple Shortcut that adds items to Reminders. */
+  reminderShortcut: string
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -72,4 +74,5 @@ export const DEFAULT_SETTINGS: Settings = {
   likes: '',
   dislikes: '',
   cuisines: '',
+  reminderShortcut: 'Add Shopping List',
 }

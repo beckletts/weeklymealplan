@@ -89,3 +89,9 @@ export const Chevron = ({ className }: P) => (
     <path d="M9 18l6-6-6-6" />
   </svg>
 )
+
+export const Heart = ({ className, filled }: P & { filled?: boolean }) => (
+  <svg {...base(className)} fill={filled ? 'currentColor' : 'none'}>
+    <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z" />
+  </svg>
+)

@@ -24,14 +24,14 @@ export default function SettingsPanel({ settings, onSave }: Props) {
   return (
     <div className="space-y-5 max-w-lg">
       <Field
-        label="Claude API key"
-        hint="Stored only in this browser — never uploaded. Get one at console.anthropic.com → API Keys."
+        label="Claude API key (optional)"
+        hint="Only needed for local dev. On the deployed site the key lives securely on the server, so you can leave this blank. Stored only in this browser — never uploaded. Get one at console.anthropic.com → API Keys."
       >
         <input
           type="password"
           value={draft.apiKey}
           onChange={(e) => update('apiKey', e.target.value)}
-          placeholder="sk-ant-..."
+          placeholder="sk-ant-... (leave blank if deployed)"
           className="input"
         />
       </Field>
@@ -70,6 +70,18 @@ export default function SettingsPanel({ settings, onSave }: Props) {
           value={draft.cuisines}
           onChange={(e) => update('cuisines', e.target.value)}
           placeholder="Italian, Indian, comfort food, slimming-friendly"
+          className="input"
+        />
+      </Field>
+
+      <Field
+        label="Apple Reminders shortcut name"
+        hint="The name of your Apple Shortcut that adds items to Reminders. Must match exactly. See the ? button on the Shopping tab for setup."
+      >
+        <input
+          value={draft.reminderShortcut}
+          onChange={(e) => update('reminderShortcut', e.target.value)}
+          placeholder="Add Shopping List"
           className="input"
         />
       </Field>

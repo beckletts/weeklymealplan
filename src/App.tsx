@@ -12,11 +12,13 @@ import {
   formatNice,
   loadPlan,
   loadSettings,
+  recentMealTitles,
   savePlan,
   saveSettings,
   sundayOf,
 } from './lib/storage'
-import { generatePlan } from './lib/ai'
+import { loadFavourites, toggleFavourite, isFavourite } from './lib/taste'
+import { generatePlan, type TasteProfile } from './lib/ai'
 import DayCard from './components/DayCard'
 import AddRecipeModal from './components/AddRecipeModal'
 import ShoppingListView from './components/ShoppingListView'
@@ -34,6 +36,7 @@ export default function App() {
   const [busyDays, setBusyDays] = useState<Set<Day>>(new Set())
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
+  const [favourites, setFavourites] = useState<string[]>(loadFavourites)
 
   // Load the plan whenever the week changes.
   useEffect(() => setPlan(loadPlan(weekStart)), [weekStart])
@@ -48,7 +51,14 @@ export default function App() {
   }, [plan.meals])
 
   const filledDays = mealByDay.size
-  const hasKey = settings.apiKey.trim().length > 0
+
+  function tasteProfile(): TasteProfile {
+    return { favourites, recent: recentMealTitles(weekStart) }
+  }
+
+  function onToggleFavourite(title: string) {
+    setFavourites((list) => toggleFavourite(list, title))
+  }
 
   function setBusy(day: Day, on: boolean) {
     setBusyDays((prev) => {
@@ -70,16 +80,11 @@ export default function App() {
   }
 
   async function suggestDay(day: Day) {
-    if (!hasKey) {
-      setError('Add your Claude API key in Settings first.')
-      setTab('settings')
-      return
-    }
     setError('')
     setBusy(day, true)
     try {
       const avoid = plan.meals.filter((m) => m.day !== day).map((m) => m.title)
-      const [meal] = await generatePlan(settings, [day], avoid)
+      const [meal] = await generatePlan(settings, [day], avoid, tasteProfile())
       if (meal) upsertMeal(meal)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not generate a meal')
@@ -89,18 +94,13 @@ export default function App() {
   }
 
   async function generateWeek() {
-    if (!hasKey) {
-      setError('Add your Claude API key in Settings first.')
-      setTab('settings')
-      return
-    }
     setError('')
     setGenerating(true)
     try {
       const emptyDays = DAYS.filter((d) => !mealByDay.has(d))
       const target = emptyDays.length ? emptyDays : [...DAYS]
       const avoid = plan.meals.filter((m) => !target.includes(m.day)).map((m) => m.title)
-      const meals = await generatePlan(settings, target, avoid)
+      const meals = await generatePlan(settings, target, avoid, tasteProfile())
       setPlan((p) => {
         const kept = p.meals.filter((m) => !target.includes(m.day))
         return { ...p, meals: [...kept, ...meals] }
@@ -189,9 +189,11 @@ export default function App() {
                   date={addDays(weekStart, i)}
                   meal={mealByDay.get(day)}
                   busy={busyDays.has(day)}
+                  favourite={mealByDay.get(day) ? isFavourite(favourites, mealByDay.get(day)!.title) : false}
                   onAdd={() => setAdding(day)}
                   onSuggest={() => suggestDay(day)}
                   onRemove={() => removeMeal(day)}
+                  onToggleFavourite={onToggleFavourite}
                 />
               ))}
             </div>
@@ -210,6 +212,7 @@ export default function App() {
             <div className="h-3" />
             <ShoppingListView
               plan={plan}
+              shortcutName={settings.reminderShortcut}
               onToggle={toggleChecked}
               onAddExtra={addExtra}
               onRemoveExtra={removeExtra}

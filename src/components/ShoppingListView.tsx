@@ -4,15 +4,23 @@ import { buildShoppingList, shoppingListToText } from '../lib/shopping'
 import { guessAisle } from '../lib/aisles'
 import { uid } from '../lib/storage'
 import { Plus, Trash, Copy, Basket } from './Icons'
+import RemindersButton from './RemindersButton'
 
 interface Props {
   plan: WeekPlan
+  shortcutName: string
   onToggle: (key: string) => void
   onAddExtra: (item: ExtraItem) => void
   onRemoveExtra: (id: string) => void
 }
 
-export default function ShoppingListView({ plan, onToggle, onAddExtra, onRemoveExtra }: Props) {
+export default function ShoppingListView({
+  plan,
+  shortcutName,
+  onToggle,
+  onAddExtra,
+  onRemoveExtra,
+}: Props) {
   const [newItem, setNewItem] = useState('')
   const [copied, setCopied] = useState(false)
   const checked = useMemo(() => new Set(plan.checked), [plan.checked])
@@ -50,13 +58,16 @@ export default function ShoppingListView({ plan, onToggle, onAddExtra, onRemoveE
             {done}/{total} items
           </span>
         </div>
-        <button
-          onClick={copyList}
-          disabled={total === 0}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
-        >
-          <Copy className="size-4" /> {copied ? 'Copied!' : 'Copy list'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={copyList}
+            disabled={total === 0}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+          >
+            <Copy className="size-4" /> {copied ? 'Copied!' : 'Copy'}
+          </button>
+          <RemindersButton groups={groups} checked={checked} shortcutName={shortcutName} />
+        </div>
       </div>
 
       <div className="flex gap-2 no-print">

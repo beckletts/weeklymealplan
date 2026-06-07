@@ -9,6 +9,41 @@ function client(apiKey: string) {
   return new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
 }
 
+/**
+ * Send a Messages API request. If the user has entered their own key it goes
+ * straight to Anthropic from the browser; otherwise we POST to the Netlify
+ * function proxy, which holds the key server-side.
+ */
+async function createMessage(
+  settings: Settings,
+  body: Anthropic.MessageCreateParamsNonStreaming,
+): Promise<Anthropic.Message> {
+  if (settings.apiKey.trim()) {
+    return client(settings.apiKey).messages.create(body)
+  }
+  const res = await fetch('/.netlify/functions/claude', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    if (res.status === 404) {
+      throw new Error(
+        'No API key found. Add one in Settings, or deploy with ANTHROPIC_API_KEY set on Netlify.',
+      )
+    }
+    let msg = `AI request failed (${res.status})`
+    try {
+      const data = await res.json()
+      if (data?.error?.message) msg = data.error.message
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg)
+  }
+  return (await res.json()) as Anthropic.Message
+}
+
 type InputSchema = Anthropic.Tool.InputSchema
 
 const ingredientSchema = {
@@ -78,10 +113,18 @@ function toMeal(raw: RawMeal, source: Meal['source'], url?: string): Meal {
  * slow-cooker dishes. `avoid` lists titles already in the plan to prevent
  * repeats when topping up empty days.
  */
+export interface TasteProfile {
+  /** Dishes the user has hearted — lean towards these styles. */
+  favourites: string[]
+  /** Dishes cooked in recent weeks — avoid repeating for variety. */
+  recent: string[]
+}
+
 export async function generatePlan(
   settings: Settings,
   days: Day[],
   avoid: string[],
+  taste: TasteProfile = { favourites: [], recent: [] },
 ): Promise<Meal[]> {
   if (days.length === 0) return []
   const slowDays = days.filter((d) => SLOW_COOKER_DAYS.includes(d))
@@ -99,16 +142,22 @@ export async function generatePlan(
 
   const prompt = [
     preferences(settings),
+    taste.favourites.length
+      ? `Meals the household has loved before — lean towards these flavours and styles (but suggest fresh ideas, don't just copy): ${taste.favourites.join('; ')}.`
+      : '',
     `Plan dinners for: ${days.join(', ')}.`,
     `Give exactly ${days.length} meals, one per day, each different.`,
-    avoid.length ? `Do NOT repeat these dishes already planned: ${avoid.join('; ')}.` : '',
+    avoid.length ? `Do NOT repeat these dishes already planned this week: ${avoid.join('; ')}.` : '',
+    taste.recent.length
+      ? `Also avoid repeating dishes cooked in recent weeks, to keep things varied: ${taste.recent.join('; ')}.`
+      : '',
     `Use ${settings.household} servings for each meal.`,
     'Return them via the submit_plan tool.',
   ]
     .filter(Boolean)
     .join(' ')
 
-  const res = await client(settings.apiKey).messages.create({
+  const res = await createMessage(settings, {
     model: MODEL,
     max_tokens: 4000,
     system,
@@ -144,7 +193,7 @@ export async function parseRecipeText(
   url?: string,
 ): Promise<Meal> {
   const isSlow = SLOW_COOKER_DAYS.includes(day)
-  const res = await client(settings.apiKey).messages.create({
+  const res = await createMessage(settings, {
     model: MODEL,
     max_tokens: 3000,
     system:

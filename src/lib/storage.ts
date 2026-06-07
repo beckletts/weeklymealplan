@@ -60,3 +60,35 @@ export function saveSettings(s: Settings): void {
 export function uid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4)
 }
+
+/**
+ * Collect dish titles from previously saved weeks (most recent first, deduped)
+ * so the AI can avoid repeating them. Reads every stored plan except the one
+ * for `excludeWeek`.
+ */
+export function recentMealTitles(excludeWeek: string, limit = 14): string[] {
+  const found: { title: string; week: string }[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i)
+    if (!k || !k.startsWith(PLAN_PREFIX)) continue
+    const week = k.slice(PLAN_PREFIX.length)
+    if (week === excludeWeek) continue
+    try {
+      const plan: WeekPlan = JSON.parse(localStorage.getItem(k)!)
+      for (const m of plan.meals ?? []) found.push({ title: m.title, week })
+    } catch {
+      /* ignore corrupt entries */
+    }
+  }
+  found.sort((a, b) => b.week.localeCompare(a.week)) // newest weeks first
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const { title } of found) {
+    const key = title.trim().toLowerCase()
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    out.push(title)
+    if (out.length >= limit) break
+  }
+  return out
+}
