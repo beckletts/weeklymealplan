@@ -1,40 +1,57 @@
 import { useMemo, useState } from 'react'
-import { type ExtraItem, type WeekPlan } from '../types'
+import { type EssentialItem, type ExtraItem, type WeekPlan } from '../types'
 import { buildShoppingList, shoppingListToText } from '../lib/shopping'
 import { guessAisle } from '../lib/aisles'
 import { uid } from '../lib/storage'
 import { Plus, Trash, Copy, Basket } from './Icons'
 import RemindersButton from './RemindersButton'
+import EssentialsManager from './EssentialsManager'
 
 interface Props {
   plan: WeekPlan
+  essentials: EssentialItem[]
   shortcutName: string
   onToggle: (key: string) => void
   onAddExtra: (item: ExtraItem) => void
   onRemoveExtra: (id: string) => void
+  onAddEssential: (item: EssentialItem) => void
+  onRemoveEssential: (id: string) => void
 }
 
 export default function ShoppingListView({
   plan,
+  essentials,
   shortcutName,
   onToggle,
   onAddExtra,
   onRemoveExtra,
+  onAddEssential,
+  onRemoveEssential,
 }: Props) {
   const [newItem, setNewItem] = useState('')
   const [copied, setCopied] = useState(false)
   const checked = useMemo(() => new Set(plan.checked), [plan.checked])
-  const groups = useMemo(() => buildShoppingList(plan), [plan])
+  const groups = useMemo(() => buildShoppingList(plan, essentials), [plan, essentials])
 
   const total = groups.reduce((n, g) => n + g.rows.length, 0)
   const done = groups.reduce((n, g) => n + g.rows.filter((r) => checked.has(r.key)).length, 0)
 
+  const rowKey = (aisle: string, name: string) =>
+    (aisle + '|' + name.trim().toLowerCase()).replace(/\s+/g, ' ')
+
   // Map a shopping row back to the extra it came from (extras-only rows are removable).
   const extraByKey = useMemo(() => {
     const m = new Map<string, ExtraItem>()
-    for (const e of plan.extras) m.set(('' + e.aisle + '|' + e.name.trim().toLowerCase()).replace(/\s+/g, ' '), e)
+    for (const e of plan.extras) m.set(rowKey(e.aisle, e.name), e)
     return m
   }, [plan.extras])
+
+  // Keys that correspond to a recurring weekly essential (for the badge).
+  const essentialKeys = useMemo(() => {
+    const s = new Set<string>()
+    for (const e of essentials) s.add(rowKey(e.aisle, e.name))
+    return s
+  }, [essentials])
 
   function addExtra() {
     const name = newItem.trim()
@@ -51,6 +68,14 @@ export default function ShoppingListView({
 
   return (
     <div className="space-y-4">
+      <div className="no-print">
+        <EssentialsManager
+          essentials={essentials}
+          onAdd={onAddEssential}
+          onRemove={onRemoveEssential}
+        />
+      </div>
+
       <div className="flex items-center justify-between gap-2 no-print">
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <Basket className="size-5 text-green-600" />
@@ -118,6 +143,11 @@ export default function ShoppingListView({
                         <span className="text-sm">{row.name}</span>
                         {row.quantities.length > 0 && (
                           <span className="text-xs text-gray-400 ml-2">{row.quantities.join(' + ')}</span>
+                        )}
+                        {essentialKeys.has(row.key) && !isChecked && (
+                          <span className="text-[10px] text-emerald-600 ml-2" title="Weekly essential">
+                            🧺
+                          </span>
                         )}
                       </div>
                       {removable && (

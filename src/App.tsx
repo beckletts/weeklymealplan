@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   DAYS,
   type Day,
+  type EssentialItem,
   type ExtraItem,
   type Meal,
   type Settings,
@@ -18,6 +19,7 @@ import {
   sundayOf,
 } from './lib/storage'
 import { loadFavourites, toggleFavourite, isFavourite } from './lib/taste'
+import { loadEssentials, addEssential, removeEssential } from './lib/essentials'
 import { generatePlan, type TasteProfile } from './lib/ai'
 import DayCard from './components/DayCard'
 import AddRecipeModal from './components/AddRecipeModal'
@@ -37,6 +39,7 @@ export default function App() {
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
   const [favourites, setFavourites] = useState<string[]>(loadFavourites)
+  const [essentials, setEssentials] = useState<EssentialItem[]>(loadEssentials)
 
   // Load the plan whenever the week changes.
   useEffect(() => setPlan(loadPlan(weekStart)), [weekStart])
@@ -127,6 +130,14 @@ export default function App() {
     setPlan((p) => ({ ...p, extras: p.extras.filter((e) => e.id !== id) }))
   }
 
+  function onAddEssential(item: EssentialItem) {
+    setEssentials((list) => addEssential(list, item))
+  }
+
+  function onRemoveEssential(id: string) {
+    setEssentials((list) => removeEssential(list, id))
+  }
+
   const weekEnd = addDays(weekStart, 4) // Sunday → Thursday
 
   return (
@@ -212,10 +223,13 @@ export default function App() {
             <div className="h-3" />
             <ShoppingListView
               plan={plan}
+              essentials={essentials}
               shortcutName={settings.reminderShortcut}
               onToggle={toggleChecked}
               onAddExtra={addExtra}
               onRemoveExtra={removeExtra}
+              onAddEssential={onAddEssential}
+              onRemoveEssential={onRemoveEssential}
             />
           </>
         )}

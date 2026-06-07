@@ -1,5 +1,5 @@
 import { aisleOrder } from './aisles'
-import type { Aisle, WeekPlan } from '../types'
+import type { Aisle, EssentialItem, WeekPlan } from '../types'
 
 export interface ShopRow {
   key: string
@@ -21,7 +21,7 @@ function rowKey(aisle: string, name: string): string {
 }
 
 /** Build the de-duplicated, aisle-grouped shopping list for a plan. */
-export function buildShoppingList(plan: WeekPlan): ShopGroup[] {
+export function buildShoppingList(plan: WeekPlan, essentials: EssentialItem[] = []): ShopGroup[] {
   const rows = new Map<string, ShopRow>()
 
   const add = (name: string, quantity: string, aisle: Aisle, source: string) => {
@@ -48,6 +48,7 @@ export function buildShoppingList(plan: WeekPlan): ShopGroup[] {
   for (const meal of plan.meals) {
     for (const ing of meal.ingredients) add(ing.name, ing.quantity, ing.aisle, meal.title)
   }
+  for (const essential of essentials) add(essential.name, essential.quantity, essential.aisle, 'Essentials')
   for (const extra of plan.extras) add(extra.name, extra.quantity, extra.aisle, 'Extras')
 
   const groups = new Map<Aisle, ShopRow[]>()

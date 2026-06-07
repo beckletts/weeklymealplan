@@ -49,6 +49,9 @@ export interface ExtraItem {
   aisle: Aisle
 }
 
+/** A staple bought most weeks — stored globally and added to every week's list. */
+export type EssentialItem = ExtraItem
+
 export interface WeekPlan {
   /** ISO date (yyyy-mm-dd) of the Sunday this plan starts. */
   weekStart: string
