@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/types.ts","./src/components/addrecipemodal.tsx","./src/components/daycard.tsx","./src/components/icons.tsx","./src/components/settingspanel.tsx","./src/components/shoppinglistview.tsx","./src/lib/ai.ts","./src/lib/aisles.ts","./src/lib/shopping.ts","./src/lib/storage.ts"],"version":"5.9.3"}
