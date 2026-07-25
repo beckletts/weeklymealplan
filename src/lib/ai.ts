@@ -222,6 +222,52 @@ export async function parseRecipeText(
   return toMeal({ ...raw, day, isSlowCooker: isSlow || raw.isSlowCooker }, url ? 'link' : 'manual', url)
 }
 
+/** Parse a recipe from a photo (e.g. a cookbook page) into a structured meal for the given day. */
+export async function parseRecipeImage(
+  settings: Settings,
+  imageBase64: string,
+  mediaType: 'image/jpeg' | 'image/png' | 'image/webp',
+  day: Day,
+): Promise<Meal> {
+  const isSlow = SLOW_COOKER_DAYS.includes(day)
+  const res = await createMessage(settings, {
+    model: MODEL,
+    max_tokens: 3000,
+    system:
+      'Extract a single recipe from the cookbook/recipe photo the user provides. Use UK ingredient names, metric quantities and UK supermarket aisles. Scale ingredient quantities to the requested servings if the original differs.',
+    tools: [
+      {
+        name: 'submit_recipe',
+        description: 'Submit the parsed recipe.',
+        input_schema: mealSchema as InputSchema,
+      },
+    ],
+    tool_choice: { type: 'tool', name: 'submit_recipe' },
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: mediaType, data: imageBase64 },
+          },
+          {
+            type: 'text',
+            text: `Servings wanted: ${settings.household}. This recipe is for ${day} (${
+              isSlow ? 'slow cooker' : 'normal'
+            }). Read the ingredients and method from the photo.`,
+          },
+        ],
+      },
+    ],
+  })
+
+  const block = res.content.find((b) => b.type === 'tool_use')
+  if (!block || block.type !== 'tool_use') throw new Error("Couldn't read a recipe from that photo")
+  const raw = block.input as RawMeal
+  return toMeal({ ...raw, day, isSlowCooker: isSlow || raw.isSlowCooker }, 'manual')
+}
+
 /**
  * Fetch a recipe page's readable text via the Jina reader proxy (handles CORS
  * and strips boilerplate), then parse it. Falls back with a clear error so the
