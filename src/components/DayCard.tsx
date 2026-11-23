@@ -12,7 +12,7 @@ interface Props {
   onAdd: () => void
   onSuggest: () => void
   onRemove: () => void
-  onToggleFavourite: (title: string) => void
+  onToggleFavourite: (meal: Meal) => void
 }
 
 export default function DayCard({
@@ -93,7 +93,7 @@ export default function DayCard({
 
           <div className="flex gap-3 mt-3 pt-2 border-t border-gray-50">
             <button
-              onClick={() => onToggleFavourite(meal.title)}
+              onClick={() => onToggleFavourite(meal)}
               className={`flex items-center gap-1 text-xs ${
                 favourite ? 'text-rose-500' : 'text-gray-500 hover:text-rose-500'
               }`}

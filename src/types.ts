@@ -42,6 +42,19 @@ export interface Meal {
   notes?: string
 }
 
+/** A saved recipe, independent of any particular week or day. */
+export interface FavouriteRecipe {
+  id: string
+  title: string
+  source: MealSource
+  url?: string
+  isSlowCooker: boolean
+  servings: number
+  ingredients: Ingredient[]
+  method: string[]
+  notes?: string
+}
+
 export interface ExtraItem {
   id: string
   name: string

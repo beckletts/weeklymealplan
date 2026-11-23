@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   DAYS,
+  SLOW_COOKER_DAYS,
   type Day,
   type EssentialItem,
   type ExtraItem,
+  type FavouriteRecipe,
   type Meal,
   type Settings,
   type WeekPlan,
@@ -17,17 +19,19 @@ import {
   savePlan,
   saveSettings,
   sundayOf,
+  uid,
 } from './lib/storage'
-import { loadFavourites, toggleFavourite, isFavourite } from './lib/taste'
+import { loadFavourites, toggleFavourite, isFavourite, favouriteTitles, removeFavourite } from './lib/taste'
 import { loadEssentials, addEssential, removeEssential } from './lib/essentials'
 import { generatePlan, type TasteProfile } from './lib/ai'
 import DayCard from './components/DayCard'
 import AddRecipeModal from './components/AddRecipeModal'
 import ShoppingListView from './components/ShoppingListView'
+import FavouritesView from './components/FavouritesView'
 import SettingsPanel from './components/SettingsPanel'
-import { Basket, Pot, Gear, Sparkles, Chevron } from './components/Icons'
+import { Basket, Pot, Gear, Sparkles, Chevron, Heart } from './components/Icons'
 
-type Tab = 'plan' | 'shop' | 'settings'
+type Tab = 'plan' | 'shop' | 'favourites' | 'settings'
 
 export default function App() {
   const [settings, setSettings] = useState<Settings>(loadSettings)
@@ -38,7 +42,7 @@ export default function App() {
   const [busyDays, setBusyDays] = useState<Set<Day>>(new Set())
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
-  const [favourites, setFavourites] = useState<string[]>(loadFavourites)
+  const [favourites, setFavourites] = useState<FavouriteRecipe[]>(loadFavourites)
   const [essentials, setEssentials] = useState<EssentialItem[]>(loadEssentials)
 
   // Load the plan whenever the week changes.
@@ -56,11 +60,31 @@ export default function App() {
   const filledDays = mealByDay.size
 
   function tasteProfile(): TasteProfile {
-    return { favourites, recent: recentMealTitles(weekStart) }
+    return { favourites: favouriteTitles(favourites), recent: recentMealTitles(weekStart) }
   }
 
-  function onToggleFavourite(title: string) {
-    setFavourites((list) => toggleFavourite(list, title))
+  function onToggleFavourite(meal: Meal) {
+    setFavourites((list) => toggleFavourite(list, meal))
+  }
+
+  function onRemoveFavourite(id: string) {
+    setFavourites((list) => removeFavourite(list, id))
+  }
+
+  function addFavouriteToDay(recipe: FavouriteRecipe, day: Day) {
+    upsertMeal({
+      id: uid(),
+      day,
+      title: recipe.title,
+      source: recipe.source,
+      url: recipe.url,
+      isSlowCooker: SLOW_COOKER_DAYS.includes(day) ? true : recipe.isSlowCooker,
+      servings: recipe.servings,
+      ingredients: recipe.ingredients.map((i) => ({ ...i, id: uid() })),
+      method: recipe.method,
+      notes: recipe.notes,
+    })
+    setTab('plan')
   }
 
   function setBusy(day: Day, on: boolean) {
@@ -234,6 +258,15 @@ export default function App() {
           </>
         )}
 
+        {tab === 'favourites' && (
+          <FavouritesView
+            favourites={favourites}
+            mealByDay={mealByDay}
+            onAddToDay={addFavouriteToDay}
+            onRemove={onRemoveFavourite}
+          />
+        )}
+
         {tab === 'settings' && <SettingsPanel settings={settings} onSave={(s) => {
           setSettings(s)
           saveSettings(s)
@@ -241,9 +274,15 @@ export default function App() {
       </main>
 
       <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-100 z-30 no-print safe-bottom">
-        <div className="max-w-2xl mx-auto grid grid-cols-3">
+        <div className="max-w-2xl mx-auto grid grid-cols-4">
           <TabButton active={tab === 'plan'} onClick={() => setTab('plan')} icon={<Pot />} label="Plan" />
           <TabButton active={tab === 'shop'} onClick={() => setTab('shop')} icon={<Basket />} label="Shopping" />
+          <TabButton
+            active={tab === 'favourites'}
+            onClick={() => setTab('favourites')}
+            icon={<Heart filled={tab === 'favourites'} />}
+            label="Favourites"
+          />
           <TabButton active={tab === 'settings'} onClick={() => setTab('settings')} icon={<Gear />} label="Settings" />
         </div>
       </nav>
